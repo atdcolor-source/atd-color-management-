@@ -1,0 +1,6 @@
+{
+  "name": "Báo Giá & Hóa Đơn Tham Khảo",
+  "description": "Ứng dụng chọn sản phẩm báo giá nhanh cho khách hàng và xuất hóa đơn tham khảo chi tiết với số lượng, đơn giá, thành tiền và tổng cộng.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

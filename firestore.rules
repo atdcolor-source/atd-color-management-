@@ -1,0 +1,991 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitive helpers
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidUsernameKey(usernameKey) {
+      return usernameKey is string
+        && usernameKey.size() >= 3
+        && usernameKey.size() <= 40
+        && usernameKey.matches('^[a-z0-9_\\-]+$');
+    }
+
+    function isValidWorkspaceId(wsId) {
+      return wsId is string
+        && wsId.size() == 67
+        && wsId.matches('^ws_[a-f0-9]{64}$');
+    }
+
+    function isValidMonthKey(mk) {
+      return mk is string
+        && mk.size() == 7
+        && mk.matches('^[0-9]{4}-(0[1-9]|1[0-2])$');
+    }
+
+    function isValidOrderDate(od) {
+      return od is string
+        && od.size() == 10
+        && od.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isBoundedNumber(val, minVal, maxVal) {
+      return (val is int || val is float) && val >= minVal && val <= maxVal;
+    }
+
+    function accountExists(usernameKey) {
+      return exists(/databases/$(database)/documents/accounts/$(usernameKey));
+    }
+
+    // 1. Account Blueprint Validation (/accounts/{usernameKey})
+    function isValidAccount(data, usernameKey) {
+      return data.keys().hasAll([
+          'usernameKey',
+          'displayName',
+          'verifierHash',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'usernameKey',
+          'displayName',
+          'verifierHash',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidUsernameKey(data.usernameKey)
+        && data.usernameKey == usernameKey
+        && data.displayName is string
+        && data.displayName.size() >= 1
+        && data.displayName.size() <= 80
+        && data.verifierHash is string
+        && data.verifierHash.size() == 64
+        && data.verifierHash.matches('^[a-f0-9]{64}$')
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // 2. WorkspaceInvoice Blueprint Validation (/workspaces/{workspaceId}/invoices/{invoiceId})
+    function isValidWorkspaceInvoice(data, workspaceId) {
+      return data.keys().hasAll([
+          'workspaceId',
+          'accountUsername',
+          'code',
+          'invoiceDate',
+          'expectedDemoDate',
+          'customerName',
+          'customerCode',
+          'customerPhone',
+          'designIllustration',
+          'invoiceNote',
+          'itemSummary',
+          'itemCount',
+          'totalQuantity',
+          'subtotal',
+          'discountAmount',
+          'shippingFee',
+          'depositAmount',
+          'remainingAmount',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'workspaceId',
+          'accountUsername',
+          'code',
+          'invoiceDate',
+          'expectedDemoDate',
+          'customerName',
+          'customerCode',
+          'customerPhone',
+          'designIllustration',
+          'invoiceNote',
+          'reportStage',
+          'itemSummary',
+          'itemCount',
+          'totalQuantity',
+          'subtotal',
+          'discountAmount',
+          'shippingFee',
+          'depositAmount',
+          'remainingAmount',
+          'remainingPaid',
+          'remainingPaidAt',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidWorkspaceId(data.workspaceId)
+        && data.workspaceId == workspaceId
+        && isValidUsernameKey(data.accountUsername)
+        && data.code is string
+        && data.code.size() >= 1
+        && data.code.size() <= 40
+        && data.code.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.invoiceDate is string
+        && data.invoiceDate.size() >= 1
+        && data.invoiceDate.size() <= 40
+        && data.expectedDemoDate is string
+        && data.expectedDemoDate.size() <= 20
+        && data.customerName is string
+        && data.customerName.size() <= 120
+        && data.customerCode is string
+        && data.customerCode.size() <= 30
+        && data.customerPhone is string
+        && data.customerPhone.size() <= 30
+        && data.designIllustration is string
+        && data.designIllustration.size() <= 200
+        && data.invoiceNote is string
+        && data.invoiceNote.size() <= 3000
+        && (!('reportStage' in data) || (
+          data.reportStage is string
+          && data.reportStage.size() <= 30
+          && data.reportStage in ['', 'bao_gia', 'cham_soc', 'coc', 'chot_in', 'chot_thiet_ke', 'hoan_thanh']
+        ))
+        && (!('remainingPaid' in data) || data.remainingPaid is bool)
+        && (!('remainingPaidAt' in data) || (
+          data.remainingPaidAt is string
+          && data.remainingPaidAt.size() <= 20
+          && (data.remainingPaidAt == '' || isValidOrderDate(data.remainingPaidAt))
+        ))
+        && data.itemSummary is string
+        && data.itemSummary.size() >= 1
+        && data.itemSummary.size() <= 300
+        && data.itemCount is int
+        && data.itemCount >= 1
+        && data.itemCount <= 100
+        && data.totalQuantity is int
+        && data.totalQuantity >= 1
+        && data.totalQuantity <= 100000
+        && isBoundedNumber(data.subtotal, 0, 10000000000)
+        && isBoundedNumber(data.discountAmount, 0, 10000000000)
+        && isBoundedNumber(data.shippingFee, 0, 10000000000)
+        && isBoundedNumber(data.depositAmount, 0, 10000000000)
+        && isBoundedNumber(data.remainingAmount, 0, 10000000000)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isWorkspaceInvoiceEditAction() {
+      return resource != null
+        && incoming().workspaceId == existing().workspaceId
+        && incoming().accountUsername == existing().accountUsername
+        && incoming().code == existing().code
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+    }
+
+    // 3. WorkspaceInvoiceItem Blueprint Validation (/workspaces/{workspaceId}/invoices/{invoiceId}/items/{itemId})
+    function isValidWorkspaceInvoiceItem(data, workspaceId, invoiceId) {
+      return data.keys().hasAll([
+          'workspaceId',
+          'invoiceId',
+          'productId',
+          'name',
+          'unit',
+          'quantity',
+          'unitPrice',
+          'note',
+          'sortIndex',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'workspaceId',
+          'invoiceId',
+          'productId',
+          'name',
+          'unit',
+          'quantity',
+          'unitPrice',
+          'note',
+          'sortIndex',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidWorkspaceId(data.workspaceId)
+        && data.workspaceId == workspaceId
+        && isValidId(data.invoiceId)
+        && data.invoiceId == invoiceId
+        && data.productId is string
+        && data.productId.size() <= 128
+        && data.name is string
+        && data.name.size() >= 1
+        && data.name.size() <= 200
+        && data.unit is string
+        && data.unit.size() >= 1
+        && data.unit.size() <= 40
+        && data.quantity is int
+        && data.quantity >= 1
+        && data.quantity <= 100000
+        && isBoundedNumber(data.unitPrice, 0, 10000000000)
+        && data.note is string
+        && data.note.size() <= 1000
+        && data.sortIndex is int
+        && data.sortIndex >= 0
+        && data.sortIndex <= 100
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isParentWorkspaceInvoiceMatching(workspaceId, invoiceId) {
+      return exists(/databases/$(database)/documents/workspaces/$(workspaceId)/invoices/$(invoiceId))
+        && get(/databases/$(database)/documents/workspaces/$(workspaceId)/invoices/$(invoiceId)).data.workspaceId == workspaceId;
+    }
+
+    function isParentWorkspaceInvoiceMatchingAfter(workspaceId, invoiceId) {
+      return existsAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/invoices/$(invoiceId))
+        && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)/invoices/$(invoiceId)).data.workspaceId == workspaceId;
+    }
+
+    function isWorkspaceInvoiceItemEditAction() {
+      return resource != null
+        && incoming().workspaceId == existing().workspaceId
+        && incoming().invoiceId == existing().invoiceId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+    }
+
+    // 4. WorkspaceSettings Blueprint Validation (/workspaces/{workspaceId}/settings/{settingId})
+    function isValidWorkspaceSettings(data, workspaceId) {
+      return data.keys().hasAll([
+          'workspaceId',
+          'accountUsername',
+          'companyName',
+          'address',
+          'phone',
+          'email',
+          'tiktok',
+          'preparerName',
+          'invoiceTitle',
+          'footerNote',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'workspaceId',
+          'accountUsername',
+          'companyName',
+          'address',
+          'phone',
+          'email',
+          'tiktok',
+          'preparerName',
+          'invoiceTitle',
+          'footerNote',
+          'showCalculator',
+          'showAiChat',
+          'logoVersion',
+          'signatureVersion',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidWorkspaceId(data.workspaceId)
+        && data.workspaceId == workspaceId
+        && isValidUsernameKey(data.accountUsername)
+        && data.companyName is string
+        && data.companyName.size() >= 1
+        && data.companyName.size() <= 120
+        && data.address is string
+        && data.address.size() <= 250
+        && data.phone is string
+        && data.phone.size() <= 40
+        && data.email is string
+        && data.email.size() <= 120
+        && data.tiktok is string
+        && data.tiktok.size() <= 80
+        && data.preparerName is string
+        && data.preparerName.size() <= 120
+        && data.invoiceTitle is string
+        && data.invoiceTitle.size() >= 1
+        && data.invoiceTitle.size() <= 120
+        && data.footerNote is string
+        && data.footerNote.size() <= 3000
+        && (!('showCalculator' in data) || data.showCalculator is bool)
+        && (!('showAiChat' in data) || data.showAiChat is bool)
+        && (
+          !('logoVersion' in data)
+          || (
+            data.logoVersion is string
+            && data.logoVersion.size() <= 40
+            && data.logoVersion.matches('^[a-zA-Z0-9_\\-]*$')
+          )
+        )
+        && (
+          !('signatureVersion' in data)
+          || (
+            data.signatureVersion is string
+            && data.signatureVersion.size() <= 40
+            && data.signatureVersion.matches('^[a-zA-Z0-9_\\-]*$')
+          )
+        )
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isWorkspaceSettingsEditAction() {
+      return resource != null
+        && incoming().workspaceId == existing().workspaceId
+        && incoming().accountUsername == existing().accountUsername
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+    }
+
+    // 5. WorkspaceProduct Blueprint Validation (/workspaces/{workspaceId}/products/{productId})
+    function isValidWorkspaceProduct(data, workspaceId) {
+      return data.keys().hasAll([
+          'workspaceId',
+          'accountUsername',
+          'code',
+          'name',
+          'category',
+          'sides',
+          'size',
+          'unit',
+          'price',
+          'sortIndex',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'workspaceId',
+          'accountUsername',
+          'code',
+          'name',
+          'category',
+          'sides',
+          'size',
+          'unit',
+          'price',
+          'sortIndex',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidWorkspaceId(data.workspaceId)
+        && data.workspaceId == workspaceId
+        && isValidUsernameKey(data.accountUsername)
+        && data.code is string
+        && data.code.size() >= 1
+        && data.code.size() <= 40
+        && data.name is string
+        && data.name.size() >= 1
+        && data.name.size() <= 200
+        && data.category is string
+        && data.category.size() >= 1
+        && data.category.size() <= 120
+        && data.sides is string
+        && data.sides.size() <= 40
+        && data.size is string
+        && data.size.size() <= 60
+        && data.unit is string
+        && data.unit.size() >= 1
+        && data.unit.size() <= 40
+        && isBoundedNumber(data.price, 0, 10000000000)
+        && data.sortIndex is int
+        && data.sortIndex >= 0
+        && data.sortIndex <= 500
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isWorkspaceProductEditAction() {
+      return resource != null
+        && incoming().workspaceId == existing().workspaceId
+        && incoming().accountUsername == existing().accountUsername
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+    }
+
+    // 6. WorkspaceVoucherBudget Blueprint Validation (/workspaces/{workspaceId}/voucherBudgets/{monthKey})
+    function isValidWorkspaceVoucherBudget(data, workspaceId, monthKey) {
+      return data.keys().hasAll([
+          'workspaceId',
+          'accountUsername',
+          'monthKey',
+          'budgetAmount',
+          'note',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'workspaceId',
+          'accountUsername',
+          'monthKey',
+          'budgetAmount',
+          'note',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidWorkspaceId(data.workspaceId)
+        && data.workspaceId == workspaceId
+        && isValidUsernameKey(data.accountUsername)
+        && isValidMonthKey(data.monthKey)
+        && data.monthKey == monthKey
+        && isBoundedNumber(data.budgetAmount, 0, 10000000000)
+        && data.note is string
+        && data.note.size() <= 500
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isWorkspaceVoucherBudgetEditAction() {
+      return resource != null
+        && incoming().workspaceId == existing().workspaceId
+        && incoming().accountUsername == existing().accountUsername
+        && incoming().monthKey == existing().monthKey
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+    }
+
+    // 7. WorkspaceCustomer Blueprint Validation (/workspaces/{workspaceId}/customers/{customerId})
+    function isValidWorkspaceCustomer(data, workspaceId) {
+      return data.keys().hasAll([
+          'workspaceId',
+          'accountUsername',
+          'name',
+          'phone',
+          'customerDate',
+          'note',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'workspaceId',
+          'accountUsername',
+          'name',
+          'phone',
+          'customerDate',
+          'note',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidWorkspaceId(data.workspaceId)
+        && data.workspaceId == workspaceId
+        && isValidUsernameKey(data.accountUsername)
+        && data.name is string
+        && data.name.size() >= 1
+        && data.name.size() <= 120
+        && data.phone is string
+        && data.phone.size() >= 1
+        && data.phone.size() <= 30
+        && data.customerDate is string
+        && data.customerDate.size() <= 30
+        && data.note is string
+        && data.note.size() <= 500
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isWorkspaceCustomerEditAction() {
+      return resource != null
+        && incoming().workspaceId == existing().workspaceId
+        && incoming().accountUsername == existing().accountUsername
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+    }
+
+    // 8. WorkspaceInventoryItem Blueprint Validation (/workspaces/{workspaceId}/inventory/{itemId})
+    function isValidWorkspaceInventoryItem(data, workspaceId) {
+      return data.keys().hasAll([
+          'workspaceId',
+          'accountUsername',
+          'name',
+          'unit',
+          'quantity',
+          'minThreshold',
+          'packSize',
+          'packLabel',
+          'sortIndex',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'workspaceId',
+          'accountUsername',
+          'name',
+          'unit',
+          'quantity',
+          'minThreshold',
+          'packSize',
+          'packLabel',
+          'sortIndex',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidWorkspaceId(data.workspaceId)
+        && data.workspaceId == workspaceId
+        && isValidUsernameKey(data.accountUsername)
+        && data.name is string
+        && data.name.size() >= 1
+        && data.name.size() <= 160
+        && data.unit is string
+        && data.unit.size() >= 1
+        && data.unit.size() <= 40
+        && isBoundedNumber(data.quantity, 0, 1000000)
+        && isBoundedNumber(data.minThreshold, 0, 1000000)
+        && isBoundedNumber(data.packSize, 1, 100000)
+        && data.packLabel is string
+        && data.packLabel.size() <= 120
+        && data.sortIndex is int
+        && data.sortIndex >= 0
+        && data.sortIndex <= 500
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isWorkspaceInventoryItemEditAction() {
+      return resource != null
+        && incoming().workspaceId == existing().workspaceId
+        && incoming().accountUsername == existing().accountUsername
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+    }
+
+    // 9. WorkspaceRevenueEntry Blueprint Validation (/workspaces/{workspaceId}/revenueEntries/{entryId})
+    function isValidWorkspaceRevenueEntry(data, workspaceId) {
+      return data.keys().hasAll([
+          'workspaceId',
+          'accountUsername',
+          'invoiceId',
+          'invoiceCode',
+          'orderDate',
+          'monthKey',
+          'customerName',
+          'customerPhone',
+          'customerCode',
+          'designAmount',
+          'printAmount',
+          'totalRevenue',
+          'isManualOverride',
+          'isDeleted',
+          'note',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'workspaceId',
+          'accountUsername',
+          'invoiceId',
+          'invoiceCode',
+          'orderDate',
+          'monthKey',
+          'customerName',
+          'customerPhone',
+          'customerCode',
+          'designAmount',
+          'printAmount',
+          'totalRevenue',
+          'isManualOverride',
+          'isDeleted',
+          'note',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidWorkspaceId(data.workspaceId)
+        && data.workspaceId == workspaceId
+        && isValidUsernameKey(data.accountUsername)
+        && data.invoiceId is string
+        && data.invoiceId.size() <= 128
+        && data.invoiceId.matches('^[a-zA-Z0-9_\\-]*$')
+        && data.invoiceCode is string
+        && data.invoiceCode.size() <= 40
+        && isValidOrderDate(data.orderDate)
+        && isValidMonthKey(data.monthKey)
+        && data.orderDate[0:7] == data.monthKey
+        && data.customerName is string
+        && data.customerName.size() >= 1
+        && data.customerName.size() <= 120
+        && data.customerPhone is string
+        && data.customerPhone.size() <= 30
+        && data.customerCode is string
+        && data.customerCode.size() <= 30
+        && isBoundedNumber(data.designAmount, 0, 10000000000)
+        && isBoundedNumber(data.printAmount, 0, 10000000000)
+        && isBoundedNumber(data.totalRevenue, 0, 20000000000)
+        && data.totalRevenue == data.designAmount + data.printAmount
+        && data.isManualOverride is bool
+        && data.isDeleted is bool
+        && data.note is string
+        && data.note.size() <= 500
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isWorkspaceRevenueEntryEditAction() {
+      return resource != null
+        && incoming().workspaceId == existing().workspaceId
+        && incoming().accountUsername == existing().accountUsername
+        && incoming().invoiceId == existing().invoiceId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+    }
+
+    // Account Registry Match Block
+    match /accounts/{usernameKey} {
+      allow get: if isValidUsernameKey(usernameKey);
+      allow list: if false;
+
+      allow create: if isValidUsernameKey(usernameKey)
+        && isValidAccount(incoming(), usernameKey)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // Capability-Scoped Shared Account Workspaces
+    match /workspaces/{workspaceId} {
+      allow read, write: if false;
+
+      match /invoices/{invoiceId} {
+        allow get: if isValidWorkspaceId(workspaceId)
+          && isValidId(invoiceId)
+          && (resource == null || (existing().workspaceId == workspaceId && existing().itemCount >= 1));
+
+        allow list: if isValidWorkspaceId(workspaceId)
+          && existing().workspaceId == workspaceId;
+
+        allow create: if isValidWorkspaceId(workspaceId)
+          && isValidId(invoiceId)
+          && isValidWorkspaceInvoice(incoming(), workspaceId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && accountExists(incoming().accountUsername);
+
+        allow update: if (
+          isValidWorkspaceInvoice(incoming(), workspaceId) && isValidWorkspaceId(workspaceId) && isValidId(invoiceId) && (
+            (isWorkspaceInvoiceEditAction() && incoming().diff(existing()).affectedKeys().hasOnly([
+              'invoiceDate',
+              'expectedDemoDate',
+              'customerName',
+              'customerCode',
+              'customerPhone',
+              'designIllustration',
+              'invoiceNote',
+              'reportStage',
+              'itemSummary',
+              'itemCount',
+              'totalQuantity',
+              'subtotal',
+              'discountAmount',
+              'shippingFee',
+              'depositAmount',
+              'remainingAmount',
+              'remainingPaid',
+              'remainingPaidAt',
+              'updatedAt'
+            ]))
+          )
+        );
+
+        allow delete: if isValidWorkspaceId(workspaceId)
+          && isValidId(invoiceId)
+          && resource != null
+          && existing().workspaceId == workspaceId
+          && existing().itemCount >= 1;
+
+        match /items/{itemId} {
+          allow get: if isValidWorkspaceId(workspaceId)
+            && isValidId(invoiceId)
+            && isValidId(itemId)
+            && (resource == null || (
+              existing().workspaceId == workspaceId
+              && existing().invoiceId == invoiceId
+              && isParentWorkspaceInvoiceMatching(workspaceId, invoiceId)
+            ));
+
+          allow list: if isValidWorkspaceId(workspaceId)
+            && isValidId(invoiceId)
+            && existing().invoiceId == invoiceId;
+
+          allow create: if isValidWorkspaceId(workspaceId)
+            && isValidId(invoiceId)
+            && isValidId(itemId)
+            && isValidWorkspaceInvoiceItem(incoming(), workspaceId, invoiceId)
+            && incoming().createdAt == request.time
+            && incoming().updatedAt == request.time
+            && isParentWorkspaceInvoiceMatchingAfter(workspaceId, invoiceId);
+
+          allow update: if (
+            isValidWorkspaceInvoiceItem(incoming(), workspaceId, invoiceId) && isValidWorkspaceId(workspaceId) && isValidId(invoiceId) && isValidId(itemId) && (
+              (isWorkspaceInvoiceItemEditAction() && incoming().diff(existing()).affectedKeys().hasOnly([
+                'productId',
+                'name',
+                'unit',
+                'quantity',
+                'unitPrice',
+                'note',
+                'sortIndex',
+                'updatedAt'
+              ]) && isParentWorkspaceInvoiceMatchingAfter(workspaceId, invoiceId))
+            )
+          );
+
+          allow delete: if isValidWorkspaceId(workspaceId)
+            && isValidId(invoiceId)
+            && isValidId(itemId)
+            && resource != null
+            && existing().workspaceId == workspaceId
+            && existing().invoiceId == invoiceId
+            && isParentWorkspaceInvoiceMatching(workspaceId, invoiceId);
+        }
+      }
+
+      match /settings/{settingId} {
+        allow get: if isValidWorkspaceId(workspaceId)
+          && settingId == 'store'
+          && (resource == null || existing().workspaceId == workspaceId);
+
+        allow list: if false;
+
+        allow create: if isValidWorkspaceId(workspaceId)
+          && settingId == 'store'
+          && isValidWorkspaceSettings(incoming(), workspaceId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && accountExists(incoming().accountUsername);
+
+        allow update: if (
+          isValidWorkspaceSettings(incoming(), workspaceId) && isValidWorkspaceId(workspaceId) && settingId == 'store' && (
+            (isWorkspaceSettingsEditAction() && incoming().diff(existing()).affectedKeys().hasOnly([
+              'companyName',
+              'address',
+              'phone',
+              'email',
+              'tiktok',
+              'preparerName',
+              'invoiceTitle',
+              'footerNote',
+              'showCalculator',
+              'showAiChat',
+              'logoVersion',
+              'signatureVersion',
+              'updatedAt'
+            ]))
+          )
+        );
+
+        allow delete: if false;
+      }
+
+      match /products/{productId} {
+        allow get: if isValidWorkspaceId(workspaceId)
+          && isValidId(productId)
+          && (resource == null || existing().workspaceId == workspaceId);
+
+        allow list: if isValidWorkspaceId(workspaceId)
+          && existing().workspaceId == workspaceId;
+
+        allow create: if isValidWorkspaceId(workspaceId)
+          && isValidId(productId)
+          && isValidWorkspaceProduct(incoming(), workspaceId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && accountExists(incoming().accountUsername);
+
+        allow update: if (
+          isValidWorkspaceProduct(incoming(), workspaceId) && isValidWorkspaceId(workspaceId) && isValidId(productId) && (
+            (isWorkspaceProductEditAction() && incoming().diff(existing()).affectedKeys().hasOnly([
+              'code',
+              'name',
+              'category',
+              'sides',
+              'size',
+              'unit',
+              'price',
+              'sortIndex',
+              'updatedAt'
+            ]))
+          )
+        );
+
+        allow delete: if isValidWorkspaceId(workspaceId)
+          && isValidId(productId)
+          && resource != null
+          && existing().workspaceId == workspaceId;
+      }
+
+      match /voucherBudgets/{monthKey} {
+        allow get: if isValidWorkspaceId(workspaceId)
+          && isValidMonthKey(monthKey)
+          && (resource == null || existing().workspaceId == workspaceId);
+
+        allow list: if isValidWorkspaceId(workspaceId)
+          && existing().workspaceId == workspaceId;
+
+        allow create: if isValidWorkspaceId(workspaceId)
+          && isValidMonthKey(monthKey)
+          && isValidWorkspaceVoucherBudget(incoming(), workspaceId, monthKey)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && accountExists(incoming().accountUsername);
+
+        allow update: if (
+          isValidWorkspaceVoucherBudget(incoming(), workspaceId, monthKey) && isValidWorkspaceId(workspaceId) && isValidMonthKey(monthKey) && (
+            (isWorkspaceVoucherBudgetEditAction() && incoming().diff(existing()).affectedKeys().hasOnly([
+              'budgetAmount',
+              'note',
+              'updatedAt'
+            ]))
+          )
+        );
+
+        allow delete: if isValidWorkspaceId(workspaceId)
+          && isValidMonthKey(monthKey)
+          && resource != null
+          && existing().workspaceId == workspaceId;
+      }
+
+      match /customers/{customerId} {
+        allow get: if isValidWorkspaceId(workspaceId)
+          && isValidId(customerId)
+          && (resource == null || existing().workspaceId == workspaceId);
+
+        allow list: if isValidWorkspaceId(workspaceId)
+          && existing().workspaceId == workspaceId;
+
+        allow create: if isValidWorkspaceId(workspaceId)
+          && isValidId(customerId)
+          && isValidWorkspaceCustomer(incoming(), workspaceId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && accountExists(incoming().accountUsername);
+
+        allow update: if (
+          isValidWorkspaceCustomer(incoming(), workspaceId) && isValidWorkspaceId(workspaceId) && isValidId(customerId) && (
+            (isWorkspaceCustomerEditAction() && incoming().diff(existing()).affectedKeys().hasOnly([
+              'name',
+              'phone',
+              'customerDate',
+              'note',
+              'updatedAt'
+            ]))
+          )
+        );
+
+        allow delete: if isValidWorkspaceId(workspaceId)
+          && isValidId(customerId)
+          && resource != null
+          && existing().workspaceId == workspaceId;
+      }
+
+      match /inventory/{itemId} {
+        allow get: if isValidWorkspaceId(workspaceId)
+          && isValidId(itemId)
+          && (resource == null || existing().workspaceId == workspaceId);
+
+        allow list: if isValidWorkspaceId(workspaceId)
+          && existing().workspaceId == workspaceId;
+
+        allow create: if isValidWorkspaceId(workspaceId)
+          && isValidId(itemId)
+          && isValidWorkspaceInventoryItem(incoming(), workspaceId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && accountExists(incoming().accountUsername);
+
+        allow update: if (
+          isValidWorkspaceInventoryItem(incoming(), workspaceId) && isValidWorkspaceId(workspaceId) && isValidId(itemId) && (
+            (isWorkspaceInventoryItemEditAction() && incoming().diff(existing()).affectedKeys().hasOnly([
+              'name',
+              'unit',
+              'quantity',
+              'minThreshold',
+              'packSize',
+              'packLabel',
+              'sortIndex',
+              'updatedAt'
+            ]))
+          )
+        );
+
+        allow delete: if isValidWorkspaceId(workspaceId)
+          && isValidId(itemId)
+          && resource != null
+          && existing().workspaceId == workspaceId;
+      }
+
+      match /revenueEntries/{entryId} {
+        allow get: if isValidWorkspaceId(workspaceId)
+          && isValidId(entryId)
+          && (resource == null || existing().workspaceId == workspaceId);
+
+        allow list: if isValidWorkspaceId(workspaceId)
+          && existing().workspaceId == workspaceId;
+
+        allow create: if isValidWorkspaceId(workspaceId)
+          && isValidId(entryId)
+          && isValidWorkspaceRevenueEntry(incoming(), workspaceId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && accountExists(incoming().accountUsername);
+
+        allow update: if (
+          isValidWorkspaceRevenueEntry(incoming(), workspaceId) && isValidWorkspaceId(workspaceId) && isValidId(entryId) && (
+            (isWorkspaceRevenueEntryEditAction() && incoming().diff(existing()).affectedKeys().hasOnly([
+              'invoiceCode',
+              'orderDate',
+              'monthKey',
+              'customerName',
+              'customerPhone',
+              'customerCode',
+              'designAmount',
+              'printAmount',
+              'totalRevenue',
+              'isManualOverride',
+              'isDeleted',
+              'note',
+              'updatedAt'
+            ]))
+          )
+        );
+
+        allow delete: if isValidWorkspaceId(workspaceId)
+          && isValidId(entryId)
+          && resource != null
+          && existing().workspaceId == workspaceId;
+      }
+    }
+
+    // Legacy read-only invoice archive retained for optional one-click migration into an account
+    match /invoices/{invoiceId} {
+      allow get: if isValidId(invoiceId)
+        && (resource == null || existing().itemCount >= 1);
+
+      allow list: if existing().itemCount >= 1;
+
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+
+      match /items/{itemId} {
+        allow get: if isValidId(invoiceId)
+          && isValidId(itemId)
+          && (resource == null || existing().invoiceId == invoiceId);
+
+        allow list: if isValidId(invoiceId)
+          && existing().invoiceId == invoiceId;
+
+        allow create: if false;
+        allow update: if false;
+        allow delete: if false;
+      }
+    }
+  }
+}

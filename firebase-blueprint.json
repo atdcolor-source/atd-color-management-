@@ -1,0 +1,1068 @@
+{
+  "entities": {
+    "Account": {
+      "title": "Account",
+      "description": "Account credential record storing normalized usernameKey, display name, and PBKDF2-SHA256 verifierHash (never storing password or workspaceId).",
+      "type": "object",
+      "properties": {
+        "usernameKey": {
+          "type": "string",
+          "description": "Normalized lowercase account identifier matching the document ID.",
+          "minLength": 3,
+          "maxLength": 40,
+          "pattern": "^[a-z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Human-readable display name for the shared account.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "verifierHash": {
+          "type": "string",
+          "description": "64-character lowercase hex PBKDF2-HMAC-SHA256 password verification digest.",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the account was registered."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the account was last updated."
+        }
+      },
+      "required": [
+        "usernameKey",
+        "displayName",
+        "verifierHash",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WorkspaceInvoice": {
+      "title": "WorkspaceInvoice",
+      "description": "Saved quotation and landscape invoice scoped to a shared account workspace.",
+      "type": "object",
+      "properties": {
+        "workspaceId": {
+          "type": "string",
+          "description": "256-bit capability workspace identifier derived from account username and password.",
+          "minLength": 67,
+          "maxLength": 67,
+          "pattern": "^ws_[a-f0-9]{64}$"
+        },
+        "accountUsername": {
+          "type": "string",
+          "description": "Registered account usernameKey owning this workspace.",
+          "minLength": 3,
+          "maxLength": 40,
+          "pattern": "^[a-z0-9_\\-]+$"
+        },
+        "code": {
+          "type": "string",
+          "description": "Human-readable invoice reference code.",
+          "minLength": 1,
+          "maxLength": 40,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "invoiceDate": {
+          "type": "string",
+          "description": "ISO date-time string displayed as invoice creation date.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "expectedDemoDate": {
+          "type": "string",
+          "description": "Expected demo delivery date in YYYY-MM-DD format or empty string.",
+          "minLength": 0,
+          "maxLength": 20
+        },
+        "customerName": {
+          "type": "string",
+          "description": "Customer name on the quotation.",
+          "minLength": 0,
+          "maxLength": 120
+        },
+        "customerCode": {
+          "type": "string",
+          "description": "Customer code generated on save in YYYYMMDDHHmm format.",
+          "minLength": 0,
+          "maxLength": 30
+        },
+        "customerPhone": {
+          "type": "string",
+          "description": "Customer phone number on the quotation.",
+          "minLength": 0,
+          "maxLength": 30
+        },
+        "designIllustration": {
+          "type": "string",
+          "description": "Selected design template illustration style shown above the invoice note.",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "invoiceNote": {
+          "type": "string",
+          "description": "Custom note shown at the bottom of the landscape invoice.",
+          "minLength": 0,
+          "maxLength": 3000
+        },
+        "reportStage": {
+          "type": "string",
+          "description": "Report pipeline classification stage linked from Saved Quotes (empty string when unclassified).",
+          "minLength": 0,
+          "maxLength": 30,
+          "enum": [
+            "",
+            "bao_gia",
+            "cham_soc",
+            "coc",
+            "chot_in",
+            "chot_thiet_ke",
+            "hoan_thanh"
+          ]
+        },
+        "itemSummary": {
+          "type": "string",
+          "description": "Concise summary of line items for archive listing.",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "itemCount": {
+          "type": "number",
+          "description": "Number of distinct line item rows in the subcollection."
+        },
+        "totalQuantity": {
+          "type": "number",
+          "description": "Sum of quantities across all line items."
+        },
+        "subtotal": {
+          "type": "number",
+          "description": "Total order value before discount, shipping, and deposit in VND."
+        },
+        "discountAmount": {
+          "type": "number",
+          "description": "Discount amount in VND."
+        },
+        "shippingFee": {
+          "type": "number",
+          "description": "Shipping fee in VND."
+        },
+        "depositAmount": {
+          "type": "number",
+          "description": "Deposit paid in VND."
+        },
+        "remainingAmount": {
+          "type": "number",
+          "description": "Remaining balance payable in VND."
+        },
+        "remainingPaid": {
+          "type": "boolean",
+          "description": "True when the remaining balance (stage 2 payment) has been collected."
+        },
+        "remainingPaidAt": {
+          "type": "string",
+          "description": "Local YYYY-MM-DD date when the remaining balance was paid or empty string if unpaid.",
+          "minLength": 0,
+          "maxLength": 20
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the invoice was first saved."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the invoice was last updated."
+        }
+      },
+      "required": [
+        "workspaceId",
+        "accountUsername",
+        "code",
+        "invoiceDate",
+        "expectedDemoDate",
+        "customerName",
+        "customerCode",
+        "customerPhone",
+        "designIllustration",
+        "invoiceNote",
+        "itemSummary",
+        "itemCount",
+        "totalQuantity",
+        "subtotal",
+        "discountAmount",
+        "shippingFee",
+        "depositAmount",
+        "remainingAmount",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WorkspaceInvoiceItem": {
+      "title": "WorkspaceInvoiceItem",
+      "description": "Individual product or design line item belonging to a WorkspaceInvoice.",
+      "type": "object",
+      "properties": {
+        "workspaceId": {
+          "type": "string",
+          "description": "Workspace identifier matching the parent WorkspaceInvoice.",
+          "minLength": 67,
+          "maxLength": 67,
+          "pattern": "^ws_[a-f0-9]{64}$"
+        },
+        "invoiceId": {
+          "type": "string",
+          "description": "Document ID of the parent WorkspaceInvoice.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "productId": {
+          "type": "string",
+          "description": "Catalog product ID or empty string for custom items.",
+          "minLength": 0,
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "description": "Product and size description displayed on the invoice row.",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "unit": {
+          "type": "string",
+          "description": "Unit of measure (e.g., Tờ, Bảng, Mẫu, Lần).",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Item quantity (positive integer)."
+        },
+        "unitPrice": {
+          "type": "number",
+          "description": "Unit price in VND."
+        },
+        "note": {
+          "type": "string",
+          "description": "Multi-line per-item note displayed next to the line total.",
+          "minLength": 0,
+          "maxLength": 1000
+        },
+        "sortIndex": {
+          "type": "number",
+          "description": "Zero-based display order index in the invoice table."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the line item was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the line item was updated."
+        }
+      },
+      "required": [
+        "workspaceId",
+        "invoiceId",
+        "productId",
+        "name",
+        "unit",
+        "quantity",
+        "unitPrice",
+        "note",
+        "sortIndex",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WorkspaceSettings": {
+      "title": "WorkspaceSettings",
+      "description": "Shared store profile and default invoice note synchronized across devices logged into the same account.",
+      "type": "object",
+      "properties": {
+        "workspaceId": {
+          "type": "string",
+          "description": "Workspace identifier matching the path.",
+          "minLength": 67,
+          "maxLength": 67,
+          "pattern": "^ws_[a-f0-9]{64}$"
+        },
+        "accountUsername": {
+          "type": "string",
+          "description": "Registered account usernameKey.",
+          "minLength": 3,
+          "maxLength": 40,
+          "pattern": "^[a-z0-9_\\-]+$"
+        },
+        "companyName": {
+          "type": "string",
+          "description": "Store or company name displayed on invoices.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "address": {
+          "type": "string",
+          "description": "Store address displayed on invoices.",
+          "minLength": 0,
+          "maxLength": 250
+        },
+        "phone": {
+          "type": "string",
+          "description": "Store contact phone number.",
+          "minLength": 0,
+          "maxLength": 40
+        },
+        "email": {
+          "type": "string",
+          "description": "Store email or website.",
+          "minLength": 0,
+          "maxLength": 120
+        },
+        "tiktok": {
+          "type": "string",
+          "description": "Store TikTok or social handle.",
+          "minLength": 0,
+          "maxLength": 80
+        },
+        "preparerName": {
+          "type": "string",
+          "description": "Default quote preparer name.",
+          "minLength": 0,
+          "maxLength": 120
+        },
+        "invoiceTitle": {
+          "type": "string",
+          "description": "Centered title on the order/quotation sheet.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "footerNote": {
+          "type": "string",
+          "description": "Default general terms and notes for new quotations.",
+          "minLength": 0,
+          "maxLength": 3000
+        },
+        "showCalculator": {
+          "type": "boolean",
+          "description": "Whether the manual bill calculator button is enabled in the workspace."
+        },
+        "showAiChat": {
+          "type": "boolean",
+          "description": "Whether the AI chat assistant box is enabled in the workspace."
+        },
+        "logoVersion": {
+          "type": "string",
+          "description": "Version token indicating the active company logo uploaded for this workspace (empty string when no logo is set).",
+          "minLength": 0,
+          "maxLength": 40,
+          "pattern": "^[a-zA-Z0-9_\\-]*$"
+        },
+        "signatureVersion": {
+          "type": "string",
+          "description": "Version token indicating the active preparer signature image uploaded for this workspace (empty string when no signature is set).",
+          "minLength": 0,
+          "maxLength": 40,
+          "pattern": "^[a-zA-Z0-9_\\-]*$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when settings were initialized."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when settings were last updated."
+        }
+      },
+      "required": [
+        "workspaceId",
+        "accountUsername",
+        "companyName",
+        "address",
+        "phone",
+        "email",
+        "tiktok",
+        "preparerName",
+        "invoiceTitle",
+        "footerNote",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WorkspaceProduct": {
+      "title": "WorkspaceProduct",
+      "description": "Catalog product item synchronized across devices sharing the same account.",
+      "type": "object",
+      "properties": {
+        "workspaceId": {
+          "type": "string",
+          "description": "Workspace identifier matching the path.",
+          "minLength": 67,
+          "maxLength": 67,
+          "pattern": "^ws_[a-f0-9]{64}$"
+        },
+        "accountUsername": {
+          "type": "string",
+          "description": "Registered account usernameKey.",
+          "minLength": 3,
+          "maxLength": 40,
+          "pattern": "^[a-z0-9_\\-]+$"
+        },
+        "code": {
+          "type": "string",
+          "description": "Product SKU or short code.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "name": {
+          "type": "string",
+          "description": "Product display name.",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "category": {
+          "type": "string",
+          "description": "Product category group.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "sides": {
+          "type": "string",
+          "description": "Optional print side specification (e.g., 1 MẶT, 2 MẶT).",
+          "minLength": 0,
+          "maxLength": 40
+        },
+        "size": {
+          "type": "string",
+          "description": "Optional size label (e.g., A3, A4, A5).",
+          "minLength": 0,
+          "maxLength": 60
+        },
+        "unit": {
+          "type": "string",
+          "description": "Unit of measure.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "price": {
+          "type": "number",
+          "description": "Catalog unit price in VND."
+        },
+        "sortIndex": {
+          "type": "number",
+          "description": "Display sort order in the catalog."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when product was saved."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when product was updated."
+        }
+      },
+      "required": [
+        "workspaceId",
+        "accountUsername",
+        "code",
+        "name",
+        "category",
+        "sides",
+        "size",
+        "unit",
+        "price",
+        "sortIndex",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WorkspaceVoucherBudget": {
+      "title": "WorkspaceVoucherBudget",
+      "description": "Monthly fixed discount voucher budget configured for a workspace.",
+      "type": "object",
+      "properties": {
+        "workspaceId": {
+          "type": "string",
+          "description": "Workspace identifier matching the path.",
+          "minLength": 67,
+          "maxLength": 67,
+          "pattern": "^ws_[a-f0-9]{64}$"
+        },
+        "accountUsername": {
+          "type": "string",
+          "description": "Registered account usernameKey.",
+          "minLength": 3,
+          "maxLength": 40,
+          "pattern": "^[a-z0-9_\\-]+$"
+        },
+        "monthKey": {
+          "type": "string",
+          "description": "Calendar month identifier in YYYY-MM format matching the document ID.",
+          "minLength": 7,
+          "maxLength": 7,
+          "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$"
+        },
+        "budgetAmount": {
+          "type": "number",
+          "description": "Fixed total discount budget for the month in VND."
+        },
+        "note": {
+          "type": "string",
+          "description": "Optional note for the monthly voucher plan.",
+          "minLength": 0,
+          "maxLength": 500
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when budget was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when budget was updated."
+        }
+      },
+      "required": [
+        "workspaceId",
+        "accountUsername",
+        "monthKey",
+        "budgetAmount",
+        "note",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WorkspaceCustomer": {
+      "title": "WorkspaceCustomer",
+      "description": "Customer contact and date record (Date KH) storing customer name, phone number, optional date, and note.",
+      "type": "object",
+      "properties": {
+        "workspaceId": {
+          "type": "string",
+          "description": "Workspace identifier matching the path.",
+          "minLength": 67,
+          "maxLength": 67,
+          "pattern": "^ws_[a-f0-9]{64}$"
+        },
+        "accountUsername": {
+          "type": "string",
+          "description": "Registered account usernameKey.",
+          "minLength": 3,
+          "maxLength": 40,
+          "pattern": "^[a-z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Customer display name.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "phone": {
+          "type": "string",
+          "description": "Customer phone number.",
+          "minLength": 1,
+          "maxLength": 30
+        },
+        "customerDate": {
+          "type": "string",
+          "description": "Customer record date or follow-up date in YYYY-MM-DD format or empty string.",
+          "minLength": 0,
+          "maxLength": 30
+        },
+        "note": {
+          "type": "string",
+          "description": "Optional customer care note.",
+          "minLength": 0,
+          "maxLength": 500
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when customer was saved."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when customer was updated."
+        }
+      },
+      "required": [
+        "workspaceId",
+        "accountUsername",
+        "name",
+        "phone",
+        "customerDate",
+        "note",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WorkspaceInventoryItem": {
+      "title": "WorkspaceInventoryItem",
+      "description": "Warehouse material stock record (Kho hàng) tracking remaining quantity, pack size, and low-stock inbox alert threshold.",
+      "type": "object",
+      "properties": {
+        "workspaceId": {
+          "type": "string",
+          "description": "Workspace identifier matching the path.",
+          "minLength": 67,
+          "maxLength": 67,
+          "pattern": "^ws_[a-f0-9]{64}$"
+        },
+        "accountUsername": {
+          "type": "string",
+          "description": "Registered account usernameKey.",
+          "minLength": 3,
+          "maxLength": 40,
+          "pattern": "^[a-z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Material or supply display name.",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "unit": {
+          "type": "string",
+          "description": "Base counting unit (e.g., Tấm, Tờ, Cuộn).",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Current remaining stock quantity in the warehouse."
+        },
+        "minThreshold": {
+          "type": "number",
+          "description": "Low-stock threshold at or below which an inbox restock alert is triggered."
+        },
+        "packSize": {
+          "type": "number",
+          "description": "Units per standard restock pack (e.g., 50 tấm per sấp)."
+        },
+        "packLabel": {
+          "type": "string",
+          "description": "Human-readable pack specification (e.g., 1 sấp = 50 tấm).",
+          "minLength": 0,
+          "maxLength": 120
+        },
+        "sortIndex": {
+          "type": "number",
+          "description": "Zero-based display order index in the warehouse view."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the inventory item was initialized."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the inventory item was last updated."
+        }
+      },
+      "required": [
+        "workspaceId",
+        "accountUsername",
+        "name",
+        "unit",
+        "quantity",
+        "minThreshold",
+        "packSize",
+        "packLabel",
+        "sortIndex",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WorkspaceRevenueEntry": {
+      "title": "WorkspaceRevenueEntry",
+      "description": "Permanent monthly revenue ledger record split into design revenue (Tiền thiết kế) and print revenue (Tiền in) from successful orders, deletable only proactively by staff.",
+      "type": "object",
+      "properties": {
+        "workspaceId": {
+          "type": "string",
+          "description": "Workspace identifier matching the path.",
+          "minLength": 67,
+          "maxLength": 67,
+          "pattern": "^ws_[a-f0-9]{64}$"
+        },
+        "accountUsername": {
+          "type": "string",
+          "description": "Registered account usernameKey.",
+          "minLength": 3,
+          "maxLength": 40,
+          "pattern": "^[a-z0-9_\\-]+$"
+        },
+        "invoiceId": {
+          "type": "string",
+          "description": "Source WorkspaceInvoice ID or empty string for manual revenue entries.",
+          "minLength": 0,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]*$"
+        },
+        "invoiceCode": {
+          "type": "string",
+          "description": "Human-readable invoice reference code or manual code.",
+          "minLength": 0,
+          "maxLength": 40
+        },
+        "orderDate": {
+          "type": "string",
+          "description": "Order date in YYYY-MM-DD format displayed as DD/MM/YYYY.",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
+        },
+        "monthKey": {
+          "type": "string",
+          "description": "Reporting month key in YYYY-MM format matching orderDate prefix.",
+          "minLength": 7,
+          "maxLength": 7,
+          "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$"
+        },
+        "customerName": {
+          "type": "string",
+          "description": "Customer display name for the order.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "customerPhone": {
+          "type": "string",
+          "description": "Customer phone number used to count distinct ordering customers per month.",
+          "minLength": 0,
+          "maxLength": 30
+        },
+        "customerCode": {
+          "type": "string",
+          "description": "Customer code associated with the order.",
+          "minLength": 0,
+          "maxLength": 30
+        },
+        "designAmount": {
+          "type": "number",
+          "description": "Design revenue portion (Tiền thiết kế) in VND."
+        },
+        "printAmount": {
+          "type": "number",
+          "description": "Printing revenue portion (Tiền in) in VND."
+        },
+        "totalRevenue": {
+          "type": "number",
+          "description": "Total order revenue (designAmount + printAmount) in VND."
+        },
+        "isManualOverride": {
+          "type": "boolean",
+          "description": "True when staff manually entered or customized the design/print revenue split."
+        },
+        "isDeleted": {
+          "type": "boolean",
+          "description": "True only when staff proactively deleted a linked revenue record so it never auto-resurrects across devices."
+        },
+        "note": {
+          "type": "string",
+          "description": "Optional breakdown or staff note for the revenue record.",
+          "minLength": 0,
+          "maxLength": 500
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the revenue record was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the revenue record was last updated."
+        }
+      },
+      "required": [
+        "workspaceId",
+        "accountUsername",
+        "invoiceId",
+        "invoiceCode",
+        "orderDate",
+        "monthKey",
+        "customerName",
+        "customerPhone",
+        "customerCode",
+        "designAmount",
+        "printAmount",
+        "totalRevenue",
+        "isManualOverride",
+        "isDeleted",
+        "note",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "Legacy pre-account saved quotation retained read-only for optional one-click migration into an account.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Legacy creator identifier.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "code": {
+          "type": "string",
+          "description": "Human-readable invoice reference code.",
+          "minLength": 1,
+          "maxLength": 40,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "invoiceDate": {
+          "type": "string",
+          "description": "ISO date-time string displayed as invoice creation date.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "expectedDemoDate": {
+          "type": "string",
+          "description": "Expected demo delivery date.",
+          "minLength": 0,
+          "maxLength": 20
+        },
+        "customerName": {
+          "type": "string",
+          "description": "Customer name on the quotation.",
+          "minLength": 0,
+          "maxLength": 120
+        },
+        "customerCode": {
+          "type": "string",
+          "description": "Customer code.",
+          "minLength": 0,
+          "maxLength": 30
+        },
+        "customerPhone": {
+          "type": "string",
+          "description": "Customer phone number.",
+          "minLength": 0,
+          "maxLength": 30
+        },
+        "designIllustration": {
+          "type": "string",
+          "description": "Selected design template illustration style.",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "invoiceNote": {
+          "type": "string",
+          "description": "Custom note shown at the bottom of the landscape invoice.",
+          "minLength": 0,
+          "maxLength": 3000
+        },
+        "itemSummary": {
+          "type": "string",
+          "description": "Concise summary of line items.",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "itemCount": {
+          "type": "number",
+          "description": "Number of distinct line item rows."
+        },
+        "totalQuantity": {
+          "type": "number",
+          "description": "Sum of quantities across all line items."
+        },
+        "subtotal": {
+          "type": "number",
+          "description": "Total order value in VND."
+        },
+        "discountAmount": {
+          "type": "number",
+          "description": "Discount amount in VND."
+        },
+        "shippingFee": {
+          "type": "number",
+          "description": "Shipping fee in VND."
+        },
+        "depositAmount": {
+          "type": "number",
+          "description": "Deposit paid in VND."
+        },
+        "remainingAmount": {
+          "type": "number",
+          "description": "Remaining balance payable in VND."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when updated."
+        }
+      },
+      "required": [
+        "ownerId",
+        "code",
+        "invoiceDate",
+        "expectedDemoDate",
+        "customerName",
+        "customerCode",
+        "customerPhone",
+        "designIllustration",
+        "invoiceNote",
+        "itemSummary",
+        "itemCount",
+        "totalQuantity",
+        "subtotal",
+        "discountAmount",
+        "shippingFee",
+        "depositAmount",
+        "remainingAmount",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "InvoiceItem": {
+      "title": "InvoiceItem",
+      "description": "Legacy line item belonging to a legacy Invoice.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Legacy creator identifier.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "invoiceId": {
+          "type": "string",
+          "description": "Document ID of the parent Invoice.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "productId": {
+          "type": "string",
+          "description": "Catalog product ID.",
+          "minLength": 0,
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "description": "Product description.",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "unit": {
+          "type": "string",
+          "description": "Unit of measure.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Item quantity."
+        },
+        "unitPrice": {
+          "type": "number",
+          "description": "Unit price in VND."
+        },
+        "note": {
+          "type": "string",
+          "description": "Per-item note.",
+          "minLength": 0,
+          "maxLength": 1000
+        },
+        "sortIndex": {
+          "type": "number",
+          "description": "Zero-based display order index."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp."
+        }
+      },
+      "required": [
+        "ownerId",
+        "invoiceId",
+        "productId",
+        "name",
+        "unit",
+        "quantity",
+        "unitPrice",
+        "note",
+        "sortIndex",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/accounts/{usernameKey}": {
+      "schema": "Account",
+      "description": "Account registry storing usernameKey and PBKDF2 password verifierHash (get/create only; list/update/delete denied)."
+    },
+    "/workspaces/{workspaceId}/invoices/{invoiceId}": {
+      "schema": "WorkspaceInvoice",
+      "description": "Saved quotations scoped to a cryptographic workspaceId shared exclusively by holders of the account and password."
+    },
+    "/workspaces/{workspaceId}/invoices/{invoiceId}/items/{itemId}": {
+      "schema": "WorkspaceInvoiceItem",
+      "description": "Line items subcollection atomically bound to a parent WorkspaceInvoice."
+    },
+    "/workspaces/{workspaceId}/settings/{settingId}": {
+      "schema": "WorkspaceSettings",
+      "description": "Store profile settings shared across devices signed into the same account."
+    },
+    "/workspaces/{workspaceId}/products/{productId}": {
+      "schema": "WorkspaceProduct",
+      "description": "Catalog products synchronized across devices signed into the same account."
+    },
+    "/workspaces/{workspaceId}/voucherBudgets/{monthKey}": {
+      "schema": "WorkspaceVoucherBudget",
+      "description": "Monthly fixed discount voucher budgets scoped to the shared workspace."
+    },
+    "/workspaces/{workspaceId}/customers/{customerId}": {
+      "schema": "WorkspaceCustomer",
+      "description": "Customer contact and date records (Date KH) scoped to the shared workspace."
+    },
+    "/workspaces/{workspaceId}/inventory/{itemId}": {
+      "schema": "WorkspaceInventoryItem",
+      "description": "Warehouse stock items (Kho hàng) and restock alert thresholds scoped to the shared workspace."
+    },
+    "/workspaces/{workspaceId}/revenueEntries/{entryId}": {
+      "schema": "WorkspaceRevenueEntry",
+      "description": "Permanent monthly revenue records split into design and print revenue, retained forever unless proactively deleted by staff."
+    },
+    "/invoices/{invoiceId}": {
+      "schema": "Invoice",
+      "description": "Read-only legacy pre-account invoice archive retained for optional migration."
+    },
+    "/invoices/{invoiceId}/items/{itemId}": {
+      "schema": "InvoiceItem",
+      "description": "Read-only legacy line items subcollection."
+    }
+  }
+}
